@@ -32,7 +32,7 @@ module elastic
   logic [width_p-1:0] d0, d1, d2, d3, d4, d5, d6, d7;
   logic [width_p-1:0] q0, q1, q2, q3, q4, q5, q6, q7;
   wire en;
-  assign en = valid_i & ready_o
+  assign en = valid_i & ready_o;
   logic valid_r;
 
   always_ff @(posedge clk_i) begin

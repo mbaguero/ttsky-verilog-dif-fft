@@ -27,7 +27,7 @@ module fft
     ,output signed [width_p -1:0] out_img_1
     ,output signed [width_p -1:0] out_img_2
     ,output signed [width_p -1:0] out_img_3
-    )
+    );
 
     wire ready_lo;
     wire ready_li;
