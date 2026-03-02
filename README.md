@@ -5,7 +5,7 @@
 
 ## 4-Point FFT Overview
 - **Authors**: Michael Aguero
-- **Architecture**: 256-point SFFT using radix-2 decimation-in-frequecy
-- **Input/Output**: 16-bit complex samples (16-bit real and imaginary components)
+- **Architecture**: 4-point FFT using radix-2 decimation-in-frequecy
+- **Input/Output**: 6-bit complex samples (6-bit real and imaginary components)
 - **Clock**: TBD
 - **Processing Time**: TBD
