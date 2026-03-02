@@ -1,14 +1,3 @@
-# 4-Point Decimation in Frequecy Fast Fourier Transform
-
-
-## FFT Overview
-
-- **Authors**: Michael Aguero
-- **Architecture**: 256-point SFFT using radix-2 decimation-in-frequecy
-- **Input/Output**: 16-bit complex samples (16-bit real and imaginary components)
-- **Clock**: TBD
-- **Processing Time**: TBD
-
 ## Running Testbench
 
 ## Running Simulation
