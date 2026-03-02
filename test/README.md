@@ -1,23 +1,13 @@
-# 256-point Short Time Fast Fourier Transform
+# 4-Point Decimation in Frequecy Fast Fourier Transform
 
-This directory contains the STFFT for the digital signal preprocessing pipeline. The STFFT is a form of the previously mentioned FFT, however in essence it computes multiple smaller FFT over certain windows. This allows the STFFT to determine audio signals with overlapping frequencies and frequencies that change over time, in our case speech. 
 
-## STFFT Overview
+## FFT Overview
 
-- **Authors**: Michael Aguero: STFFT Wrapper RTL & Verfication, Jose Peralta Window Function Verfication
+- **Authors**: Michael Aguero
 - **Architecture**: 256-point SFFT using radix-2 decimation-in-frequecy
 - **Input/Output**: 16-bit complex samples (16-bit real and imaginary components)
 - **Clock**: TBD
 - **Processing Time**: TBD
-
-## 256-point FFT Core
-
-Gisselquist Technology's ZipCPU created an open source pipelined FFT generator, this allows us to generate a custom FFT core for the ASIC. This can be done by downloading and building the https://github.com/ZipCPU/dblclockfft that is available on GitHub by ZipCPU. Once the `make` command is complete there will be a `fftgen` executable in the `sw/` directory. Using this executable alongside parameters we can build the custom core:
-
-`./fftgen -f 256 -n 14 -m 18 -k 4 -p 1`
-
-
-## Windowing Function
 
 ## Running Testbench
 
