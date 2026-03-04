@@ -9,3 +9,6 @@
 - **Input/Output**: 6-bit complex samples (6-bit real and imaginary components)
 - **Clock**: 100kHz
 - **Processing Time**: TBD
+
+## Not Properly Working
+- Off by one frame 
