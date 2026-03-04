@@ -18,4 +18,9 @@ To test this FFT you can run `make` in the `test` directory. However, as of now 
 ## Resources
 
 - Claude: Due to time constraints I used a LLM to make the cocotb testbench, might be why it does not work!
-- 
+- ZIPCPU: https://zipcpu.com/dsp/2018/10/02/fft.html
+- Bevan Bass: https://www.ece.ucdavis.edu/~bbaas/dissertation/pdf.ps/thesis.1side.pdf
+- https://www.brainkart.com/article/Decimation-In-Frequency-(DIFFFT)_13033/
+- https://studylib.net/doc/10311597/decimation-in-frequency--dif--radix-2-fft-douglas-l.-jones
+- https://web.mit.edu/6.111/www/f2017/handouts/FFTtutorial121102.pdf
+- https://www.geeksforgeeks.org/digital-logic/sipo-shift-register/
