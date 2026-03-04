@@ -17,33 +17,40 @@ module tt_um_dif_fft_core (
 );
 
 
-    localparam width_p = 6;
+    localparam width_p = 8;
 
     wire reset = ~rst_n;
 
-    // drive uio as input for first 4 bits then output for last 4 bits
-    assign uio_oe  = 8'b11110000;
 
     // SIPO
-
+    logic sipo_valid;
     logic [width_p-1:0] sipo_real [0:3];
     logic [width_p-1:0] sipo_imag [0:3];
 
     sipo #(.width_p(width_p)) sipo_inst (
         .clk_i(clk),
         .reset_i(reset),
-        .serial_real(ui_in[5:0]),
-        .serial_imag({uio_in[3:0], ui_in[7:6]}),
+        .serial_real(ui_in),
+        .serial_imag(uio_in),
+        .valid_o(sipo_valid),
         .buf_real(sipo_real),
         .buf_imag(sipo_imag)
     );
 
+    // FFT
+    logic fft_valid_o;
+    wire fft_ready_o;
+    wire fft_ready_i = 1'b1;  // always ready downstream
+
     logic signed [width_p-1:0] fft_out_real [0:3];
     logic signed [width_p-1:0] fft_out_imag [0:3];
 
-    fft #(.width_p(width_p)) fft_inst (
+    dfft #(.width_p(width_p)) dfft_inst (
         .clk_i(clk),
         .reset_i(reset),
+
+        .valid_i(sipo_valid),
+        .ready_o(), /*TODO*/
 
         .in_real_0(sipo_real[0]),
         .in_real_1(sipo_real[1]),
@@ -55,6 +62,8 @@ module tt_um_dif_fft_core (
         .in_img_2(sipo_imag[2]),
         .in_img_3(sipo_imag[3]),
 
+        .valid_o(fft_valid_o),
+        .ready_i(fft_ready_i),
 
         .out_real_0(fft_out_real[0]),
         .out_real_1(fft_out_real[1]),
@@ -68,15 +77,27 @@ module tt_um_dif_fft_core (
     );
 
     // PISO
+    logic piso_valid;
+    logic [width_p-1:0] serial_real_out;
+    logic [width_p-1:0] serial_imag_out;
 
     piso #(.width_p(width_p)) piso_inst (
         .clk_i(clk),
         .reset_i(reset),
+        .ready_i(1'b1),   // always shifting
         .buf_real(fft_out_real),
         .buf_imag(fft_out_imag),
-        .serial_real(uo_out(5:0)),
-        .serial_imag({{uio_out[7:4], uo_out[7:6]}})
+        .valid_o(piso_valid),
+        .serial_real(serial_real_out),
+        .serial_imag(serial_imag_out)
     );
+
+
+    assign uo_out  = serial_real_out;
+    assign uio_out = serial_imag_out;
+
+    // drive uio as output
+    assign uio_oe  = 8'hFF;
 
     // unused
     wire _unused = &{ena, 1'b0};
