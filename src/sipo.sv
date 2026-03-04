@@ -3,41 +3,53 @@ module sipo
     )
     (input wire clk_i
     ,input wire reset_i
-    ,input wire [width_p -1:0] serial_real
-    ,input wire [width_p -1:0] serial_imag
-
-    ,output logic [width_p -1:0] buf_real [0:3]
-    ,output logic [width_p -1:0] buf_imag [0:3]
+    ,input wire en_i
+    ,input wire [width_p-1:0] serial_real
+    ,input wire [width_p-1:0] serial_imag
+    ,output logic valid_o
+    ,output logic [width_p-1:0] buf_real [0:3]
+    ,output logic [width_p-1:0] buf_imag [0:3]
 );
+    logic [1:0] wr_addr_q;
+    logic valid_q, valid_q1;
 
-    logic [1:0] wr_addr_d, wr_addr_q;
-
+    // Counter only advances on en_i
     always_ff @(posedge clk_i) begin
         if (reset_i) begin
-            wr_addr_q <= 2'b0;
+            wr_addr_q <= 2'd0;
+            valid_q   <= 1'b0;
+        end else if (en_i) begin
+            if (wr_addr_q == 2'd3) begin
+                wr_addr_q <= 2'd0;
+                valid_q   <= 1'b1;
+            end else begin
+                wr_addr_q <= wr_addr_q + 1;
+                valid_q   <= 1'b0;
+            end
         end else begin
-            wr_addr_q <= wr_addr_d;
+            valid_q <= 1'b0;
         end
     end
 
-    always_comb begin
-        wr_addr_d = wr_addr_q;
-        if (wr_addr_q < 2'd3) begin
-            wr_addr_d = wr_addr_q + 1;
-        end else if (wr_addr_q == 2'd3) begin
-            wr_addr_d = 2'b0;
-        end else begin
-            wr_addr_d = wr_addr_q;
-        end
-    end
-
+    // Buffer write
     always_ff @(posedge clk_i) begin
         if (reset_i) begin
-            ;
-        end else begin
+            buf_real[0] <= '0; buf_real[1] <= '0;
+            buf_real[2] <= '0; buf_real[3] <= '0;
+            buf_imag[0] <= '0; buf_imag[1] <= '0;
+            buf_imag[2] <= '0; buf_imag[3] <= '0;
+        end else if (en_i) begin
             buf_real[wr_addr_q] <= serial_real;
             buf_imag[wr_addr_q] <= serial_imag;
         end
     end
+
+    // One-cycle delay: valid fires after buf[3] is committed
+    always_ff @(posedge clk_i) begin
+        if (reset_i) valid_q1 <= 1'b0;
+        else         valid_q1 <= valid_q;
+    end
+
+    assign valid_o = valid_q1;
 
 endmodule

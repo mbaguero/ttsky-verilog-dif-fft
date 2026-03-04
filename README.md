@@ -7,5 +7,5 @@
 - **Authors**: Michael Aguero
 - **Architecture**: 4-point FFT using radix-2 decimation-in-frequecy
 - **Input/Output**: 6-bit complex samples (6-bit real and imaginary components)
-- **Clock**: TBD
+- **Clock**: 100kHz
 - **Processing Time**: TBD

@@ -9,8 +9,7 @@ SRC_DIR = $(PWD)/../src
 PROJECT_SOURCES = top.sv \
 				  fft.sv \
 				  piso.sv \
-				  sipo.sv \
-				  elastic.sv \
+				  sipo.sv 
 
 ifneq ($(GATES),yes)
 

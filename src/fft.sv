@@ -1,10 +1,7 @@
 module fft
     #(parameter width_p = 6
     )
-    (input [0:0] clk_i
-    ,input [0:0] reset_i
-
-    ,input signed [width_p - 1:0] in_real_0
+    (input signed [width_p - 1:0] in_real_0
     ,input signed [width_p - 1:0] in_real_1
     ,input signed [width_p - 1:0] in_real_2
     ,input signed [width_p - 1:0] in_real_3
@@ -41,9 +38,6 @@ module fft
     assign D_i = (-(in_real_1 - in_real_3)) >>> 1;
 
     // Stage 2
-
-    wire signed [width_p -1:0] X0_r, X1_r, X0_i, X1_i;
-    wire signed [width_p -1:0] X2_r, X3_r, X2_i, X3_i;
 
     assign out_real_0 = (A_r + B_r) >>> 1;
     assign out_real_1 = (A_r - B_r) >>> 1;

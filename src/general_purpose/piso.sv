@@ -7,8 +7,8 @@ module piso
     ,input valid_i
     ,output logic ready_o
 
-    ,input logic [width_p -1:0] buf_real [0:3]
-    ,input logic [width_p -1:0] buf_imag [0:3]
+    ,input logic [width_p -1:0] buf_real [0:2]
+    ,input logic [width_p -1:0] buf_imag [0:2]
 
     ,output logic [width_p -1:0] serial_real
     ,output logic [width_p -1:0] serial_imag
