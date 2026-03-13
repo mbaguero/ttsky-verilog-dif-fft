@@ -25,14 +25,18 @@ module tt_um_dif_fft_core (
     
     // Control signals
     wire serial_valid;
-    wire [5:0] serial_imag_combined;
+    wire [7:0] serial_imag_combined;
+    
+
+    wire [3:0] uio_in_upper_unused;
+    assign uio_in_upper_unused = uio_in[7:4];
     
 
     assign serial_valid = !valid_lo;
+    assign serial_imag_combined = {uio_in[3:0], ui_in[7:6]};
+    assign uio_oe = 8'b11110000;
     
 
-    assign serial_imag_combined = {uio_in[3:0], ui_in[7:6]};
-    
     sipo #(.width_p(width_p)) sipo_inst (
         .clk_i       (clk),
         .reset_i     (reset),
@@ -89,16 +93,14 @@ module tt_um_dif_fft_core (
         .serial_imag ({uio_out[7:4], uo_out[7:6]})
     );
     
-
-    assign uio_oe = 8'b11110000;
-    
-    wire _unused = &{ena, 1'b0};
+    wire _unused = &{ena, uio_in_upper_unused, 1'b0};
 
 endmodule
 
+
 module sipo #(
     parameter width_p = 6
-)(
+) (
     input  wire                     clk_i,
     input  wire                     reset_i,
     input  wire                     valid_i,
@@ -168,7 +170,6 @@ module sipo #(
         valid_d = valid_q;
         
         if (valid_i && ready_i) begin
-            // Shift pipeline and load new data
             stage3_real_d = stage2_real_q;
             stage2_real_d = stage1_real_q;
             stage1_real_d = stage0_real_q;
@@ -186,7 +187,6 @@ module sipo #(
             end
         end
         
-
         if (valid_q && ready_i) begin
             valid_d = 1'b0;
             count_d = 2'b0;
@@ -203,7 +203,6 @@ module sipo #(
     assign buf_imag_2 = stage2_imag_q;
     assign buf_imag_3 = stage3_imag_q;
     assign valid_o = valid_q;
-
 
 endmodule
 
@@ -254,75 +253,80 @@ module fft
 
 endmodule
 
-module piso
-    #(parameter width_p = 6
-    )
-    (input  wire                     clk_i
-    ,input  wire                     reset_i
-    ,input  wire                     valid_i
-    ,output wire                     ready_o
-    ,input  wire [width_p-1:0]       buf_real_0
-    ,input  wire [width_p-1:0]       buf_real_1
-    ,input  wire [width_p-1:0]       buf_real_2
-    ,input  wire [width_p-1:0]       buf_real_3
-    ,input  wire [width_p-1:0]       buf_imag_0
-    ,input  wire [width_p-1:0]       buf_imag_1
-    ,input  wire [width_p-1:0]       buf_imag_2
-    ,input  wire [width_p-1:0]       buf_imag_3
-    ,output reg  [width_p-1:0]       serial_real
-    ,output reg  [width_p-1:0]       serial_imag
-    );
-
-
+//============================================================================
+// PISO Module: Parallel In Serial Out (4-stage to serial)
+//============================================================================
+module piso #(
+    parameter width_p = 6
+) (
+    input  wire                     clk_i,
+    input  wire                     reset_i,
+    input  wire                     valid_i,
+    output wire                     ready_o,
+    input  wire [width_p-1:0]       buf_real_0,
+    input  wire [width_p-1:0]       buf_real_1,
+    input  wire [width_p-1:0]       buf_real_2,
+    input  wire [width_p-1:0]       buf_real_3,
+    input  wire [width_p-1:0]       buf_imag_0,
+    input  wire [width_p-1:0]       buf_imag_1,
+    input  wire [width_p-1:0]       buf_imag_2,
+    input  wire [width_p-1:0]       buf_imag_3,
+    output reg  [width_p-1:0]       serial_real,
+    output reg  [width_p-1:0]       serial_imag
+);
+  
     reg [1:0] count_q, count_d;
     reg [width_p-1:0] buffer_real_q[0:3];
     reg [width_p-1:0] buffer_imag_q[0:3];
-    reg [width_p-1:0] buffer_real_d[0:3];
-    reg [width_p-1:0] buffer_imag_d[0:3];
     reg busy_q, busy_d;
+    reg [width_p-1:0] buffer_real_next[0:3];
+    reg [width_p-1:0] buffer_imag_next[0:3];
     
 
-    integer i;
-    
     always @(posedge clk_i) begin
+        integer j;
         if (reset_i) begin
             count_q <= 2'b0;
             busy_q <= 1'b0;
-            for (i = 0; i < 4; i = i + 1) begin
-                buffer_real_q[i] <= {width_p{1'b0}};
-                buffer_imag_q[i] <= {width_p{1'b0}};
+            for (j = 0; j < 4; j = j + 1) begin
+                buffer_real_q[j] <= {width_p{1'b0}};
+                buffer_imag_q[j] <= {width_p{1'b0}};
             end
         end else begin
             count_q <= count_d;
             busy_q <= busy_d;
-            for (i = 0; i < 4; i = i + 1) begin
-                buffer_real_q[i] <= buffer_real_d[i];
-                buffer_imag_q[i] <= buffer_imag_d[i];
+            for (j = 0; j < 4; j = j + 1) begin
+                buffer_real_q[j] <= buffer_real_next[j];
+                buffer_imag_q[j] <= buffer_imag_next[j];
             end
         end
     end
     
 
     always_comb begin
+        integer k;
+        
         count_d = count_q;
         busy_d = busy_q;
-        for (i = 0; i < 4; i = i + 1) begin
-            buffer_real_d[i] = buffer_real_q[i];
-            buffer_imag_d[i] = buffer_imag_q[i];
+        for (k = 0; k < 4; k = k + 1) begin
+            buffer_real_next[k] = buffer_real_q[k];
+            buffer_imag_next[k] = buffer_imag_q[k];
         end
         
+  
         serial_real = {width_p{1'b0}};
         serial_imag = {width_p{1'b0}};
         
         if (valid_i && !busy_q) begin
-            buffer_real_d[0] = buf_real_0;
-            buffer_real_d[1] = buf_real_1;
-            buffer_real_d[2] = buf_real_2;
-            buffer_real_d[3] = buf_real_3;
-            buffer_imag_d[0] = buf_imag_0;
-            buffer_imag_d[1] = buf_imag_1;
-            buffer_imag_d[2] = buf_imag_2;
-            buffer_imag_d[3] = buf_imag_3;
+
+            buffer_real_next[0] = buf_real_0;
+            buffer_real_next[1] = buf_real_1;
+            buffer_real_next[2] = buf_real_2;
+            buffer_real_next[3] = buf_real_3;
+            buffer_imag_next[0] = buf_imag_0;
+            buffer_imag_next[1] = buf_imag_1;
+            buffer_imag_next[2] = buf_imag_2;
+            buffer_imag_next[3] = buf_imag_3;
             busy_d = 1'b1;
             count_d = 2'b0;
             
@@ -349,8 +353,9 @@ module piso
                 end
             endcase
             
+  
             count_d = count_q + 1;
-            
+
             if (count_q == 2'b11) begin
                 busy_d = 1'b0;
             end
