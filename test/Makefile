@@ -7,7 +7,9 @@ FST ?= -fst # Use more efficient FST format
 TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
 PROJECT_SOURCES = top.sv \
-				  fft.sv 
+				  fft.sv \
+				  sipo.sv \
+				  piso.sv 
 
 ifneq ($(GATES),yes)
 
