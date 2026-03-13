@@ -17,42 +17,6 @@ jobs:
         uses: TinyTapeout/tt-gds-action@ttsky26a
         with:
           pdk: sky130A
-        continue-on-error: true  # Continue even if it fails so we can see errors
-
-      - name: Show Yosys check errors
-        if: always()  # Run even if previous step failed
-        run: |
-          echo "=== Looking for error files ==="
-          find . -name "*.txt" -o -name "*.log" | grep -E "(error|warning|check)"
-          
-          echo -e "\n=== Yosys Check Errors ==="
-          find runs/ -name "errors.txt" 2>/dev/null | while read file; do
-            echo "--- $file ---"
-            cat "$file" 2>/dev/null || echo "Empty or cannot read"
-          done
-          
-          echo -e "\n=== Yosys Check Warnings ==="
-          find runs/ -name "warnings.txt" 2>/dev/null | while read file; do
-            echo "--- $file ---"
-            cat "$file" 2>/dev/null || echo "Empty or cannot read"
-          done
-          
-          echo -e "\n=== Latest yosys log ==="
-          ls -la runs/wokwi/06-yosys-synthesis/ 2>/dev/null || echo "No yosys synthesis dir"
-          cat runs/wokwi/06-yosys-synthesis/yosys.log 2>/dev/null || echo "No yosys.log"
-          
-          echo -e "\n=== Checker directories ==="
-          ls -la runs/wokwi/0*-checker-*/ 2>/dev/null || echo "No checker dirs"
-
-      - name: Upload error logs as artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: yosys-error-logs
-          path: |
-            runs/wokwi/**/*.txt
-            runs/wokwi/**/*.log
-            runs/wokwi/**/reports/
 
   precheck:
     needs: gds

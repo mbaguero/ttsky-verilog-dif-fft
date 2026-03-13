@@ -34,6 +34,7 @@ module tt_um_dif_fft_core (
 
     assign serial_valid = !valid_lo;
     assign serial_imag_combined = {uio_in[3:0], ui_in[7:6]};
+
     assign uio_oe = 8'b11110000;
     
 
@@ -93,7 +94,8 @@ module tt_um_dif_fft_core (
         .serial_imag ({uio_out[7:4], uo_out[7:6]})
     );
     
-    wire _unused = &{ena, uio_in_upper_unused, 1'b0, uio_out[3:0]};
+    wire _unused = &{ena, uio_in_upper_unused, 1'b0};
+    assign uio_out[3:0] = 4'b0000;
 
 endmodule
 
