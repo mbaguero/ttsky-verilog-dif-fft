@@ -255,9 +255,6 @@ module fft
 
 endmodule
 
-//============================================================================
-// PISO Module: Parallel In Serial Out (4-stage to serial)
-//============================================================================
 module piso #(
     parameter width_p = 6
 ) (
