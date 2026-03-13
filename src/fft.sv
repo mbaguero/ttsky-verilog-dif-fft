@@ -1,30 +1,46 @@
 module fft
-    #(parameter width_p = 2)
-    (
-     input  signed [width_p-1:0] in_real_0
-    ,input  signed [width_p-1:0] in_real_1
-    ,input  signed [width_p-1:0] in_real_2
-    ,input  signed [width_p-1:0] in_real_3
-    ,output signed [width_p+1:0] out_real_0  
-    ,output signed [width_p+1:0] out_real_1  
-    ,output signed [width_p+1:0] out_img_1   
-    ,output signed [width_p+1:0] out_real_2
+    #(parameter width_p = 8
+    )
+    (input signed [width_p - 1:0] in_real_0
+    ,input signed [width_p - 1:0] in_real_1
+    ,input signed [width_p - 1:0] in_real_2
+    ,input signed [width_p - 1:0] in_real_3
+    ,input signed [width_p - 1:0] in_img_0
+    ,input signed [width_p - 1:0] in_img_1
+    ,input signed [width_p - 1:0] in_img_2
+    ,input signed [width_p - 1:0] in_img_3
+    ,output signed [width_p -1:0] out_real_0
+    ,output signed [width_p -1:0] out_real_1
+    ,output signed [width_p -1:0] out_real_2
+    ,output signed [width_p -1:0] out_real_3
+    ,output signed [width_p -1:0] out_img_0
+    ,output signed [width_p -1:0] out_img_1
+    ,output signed [width_p -1:0] out_img_2
+    ,output signed [width_p -1:0] out_img_3
     );
 
-    // Stage 1: widen inputs by 1 bit before adding → 3-bit intermediates
-    wire signed [width_p:0] A_r = {{1{in_real_0[width_p-1]}}, in_real_0}
-                                + {{1{in_real_2[width_p-1]}}, in_real_2};
-    wire signed [width_p:0] B_r = {{1{in_real_1[width_p-1]}}, in_real_1}
-                                + {{1{in_real_3[width_p-1]}}, in_real_3};
-    wire signed [width_p:0] C_r = {{1{in_real_0[width_p-1]}}, in_real_0}
-                                - {{1{in_real_2[width_p-1]}}, in_real_2};
-    wire signed [width_p:0] D_r = {{1{in_real_3[width_p-1]}}, in_real_3}
-                                - {{1{in_real_1[width_p-1]}}, in_real_1};
 
-    // Stage 2: widen intermediates by 1 bit before adding → 4-bit outputs
-    assign out_real_0 = {{1{A_r[width_p]}}, A_r} + {{1{B_r[width_p]}}, B_r};
-    assign out_real_2 = {{1{A_r[width_p]}}, A_r} - {{1{B_r[width_p]}}, B_r};
-    assign out_real_1 = {{2{C_r[width_p]}}, C_r[width_p-1:0]};  // sign-extend to 4 bits
-    assign out_img_1  = {{2{D_r[width_p]}}, D_r[width_p-1:0]};
+    wire signed [width_p-1:0] A_r, B_r, C_r, D_r;
+    wire signed [width_p-1:0] A_i, B_i, C_i, D_i;
+
+    assign A_r = (in_real_0 + in_real_2) >>> 1;
+    assign B_r = (in_real_1 + in_real_3) >>> 1;
+    assign C_r = (in_real_0 - in_real_2) >>> 1;
+    assign D_r = (in_img_1 - in_img_3) >>> 1;
+
+    assign A_i = (in_img_0 + in_img_2) >>> 1;
+    assign B_i = (in_img_1 + in_img_3) >>> 1;
+    assign C_i = (in_img_0 - in_img_2) >>> 1;
+    assign D_i = (-(in_real_1 - in_real_3)) >>> 1;
+
+
+    assign out_real_0 = (A_r + B_r) >>> 1;
+    assign out_real_1 = (A_r - B_r) >>> 1;
+    assign out_real_2 = (C_r + D_r) >>> 1;
+    assign out_real_3 = (C_r - D_r) >>> 1;
+    assign out_img_0  = (A_i + B_i) >>> 1;
+    assign out_img_1  = (A_i - B_i) >>> 1;
+    assign out_img_2  = (C_i + D_i) >>> 1;
+    assign out_img_3  = (C_i - D_i) >>> 1;
 
 endmodule
