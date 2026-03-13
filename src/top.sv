@@ -25,7 +25,7 @@ module tt_um_dif_fft_core (
     
     // Control signals
     wire serial_valid;
-    wire [7:0] serial_imag_combined;
+    wire [5:0] serial_imag_combined;
     
 
     wire [3:0] uio_in_upper_unused;
@@ -93,7 +93,7 @@ module tt_um_dif_fft_core (
         .serial_imag ({uio_out[7:4], uo_out[7:6]})
     );
     
-    wire _unused = &{ena, uio_in_upper_unused, 1'b0};
+    wire _unused = &{ena, uio_in_upper_unused, 1'b0, uio_out[3:0]};
 
 endmodule
 
