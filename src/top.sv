@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2024 Michael Aguero
+ * SPDX-License-Identifier: Apache-2.0
+ */
+`default_nettype none
+
+//============================================================================
+// Top Module: tt_um_dif_fft_core
+//============================================================================
 module tt_um_dif_fft_core (
     input  wire [7:0] ui_in,
     output wire [7:0] uo_out,
@@ -8,10 +17,14 @@ module tt_um_dif_fft_core (
     input  wire       clk,
     input  wire       rst_n
 );
-
+    //------------------------------------------------------------------------
+    // Parameters
+    //------------------------------------------------------------------------
     localparam width_p = 6;
     
-
+    //------------------------------------------------------------------------
+    // Internal Signals
+    //------------------------------------------------------------------------
     wire reset = ~rst_n;
     
     // SIPO to FFT signals
@@ -25,18 +38,24 @@ module tt_um_dif_fft_core (
     
     // Control signals
     wire serial_valid;
-    wire [5:0] serial_imag_combined;
+    wire [7:0] serial_imag_combined;
     
-
+    //------------------------------------------------------------------------
+    // Fix for UNUSEDSIGNAL - use the upper bits of uio_in
+    //------------------------------------------------------------------------
     wire [3:0] uio_in_upper_unused;
     assign uio_in_upper_unused = uio_in[7:4];
     
-
+    //------------------------------------------------------------------------
+    // Control Logic
+    //------------------------------------------------------------------------
     assign serial_valid = !valid_lo;
     assign serial_imag_combined = {uio_in[3:0], ui_in[7:6]};
     assign uio_oe = 8'b11110000;
     
-
+    //------------------------------------------------------------------------
+    // SIPO Module Instantiation
+    //------------------------------------------------------------------------
     sipo #(.width_p(width_p)) sipo_inst (
         .clk_i       (clk),
         .reset_i     (reset),
@@ -55,7 +74,9 @@ module tt_um_dif_fft_core (
         .buf_imag_3  (sipo_imag_3)
     );
     
-
+    //------------------------------------------------------------------------
+    // FFT Module Instantiation
+    //------------------------------------------------------------------------
     fft #(.width_p(width_p)) fft_inst (
         .in_real_0  (sipo_real_0), 
         .in_real_1  (sipo_real_1),
@@ -75,7 +96,9 @@ module tt_um_dif_fft_core (
         .out_img_3  (fft_imag_3)
     );
     
-
+    //------------------------------------------------------------------------
+    // PISO Module Instantiation
+    //------------------------------------------------------------------------
     piso #(.width_p(width_p)) piso_inst (
         .clk_i       (clk),
         .reset_i     (reset),
@@ -93,11 +116,16 @@ module tt_um_dif_fft_core (
         .serial_imag ({uio_out[7:4], uo_out[7:6]})
     );
     
-    wire _unused = &{ena, uio_in_upper_unused, 1'b0, uio_out[3:0]};
+    //------------------------------------------------------------------------
+    // Unused Signals
+    //------------------------------------------------------------------------
+    wire _unused = &{ena, uio_in_upper_unused, 1'b0};
 
 endmodule
 
-
+//============================================================================
+// SIPO Module - Serial In Parallel Out
+//============================================================================
 module sipo #(
     parameter width_p = 6
 ) (
@@ -117,120 +145,101 @@ module sipo #(
     output reg  [width_p-1:0]       buf_imag_2,
     output reg  [width_p-1:0]       buf_imag_3
 );
-
-    reg [1:0] count_q, count_d;
-    reg [width_p-1:0] stage0_real_q, stage0_real_d;
-    reg [width_p-1:0] stage1_real_q, stage1_real_d;
-    reg [width_p-1:0] stage2_real_q, stage2_real_d;
-    reg [width_p-1:0] stage3_real_q, stage3_real_d;
-    reg [width_p-1:0] stage0_imag_q, stage0_imag_d;
-    reg [width_p-1:0] stage1_imag_q, stage1_imag_d;
-    reg [width_p-1:0] stage2_imag_q, stage2_imag_d;
-    reg [width_p-1:0] stage3_imag_q, stage3_imag_d;
-    reg valid_q, valid_d;
+    //------------------------------------------------------------------------
+    // Internal Signals
+    //------------------------------------------------------------------------
+    reg [1:0] count;
+    reg [width_p-1:0] stage0_real, stage1_real, stage2_real, stage3_real;
+    reg [width_p-1:0] stage0_imag, stage1_imag, stage2_imag, stage3_imag;
     
-
+    //------------------------------------------------------------------------
+    // Sequential Logic
+    //------------------------------------------------------------------------
     always @(posedge clk_i) begin
         if (reset_i) begin
-            count_q <= 2'b0;
-            stage0_real_q <= {width_p{1'b0}};
-            stage1_real_q <= {width_p{1'b0}};
-            stage2_real_q <= {width_p{1'b0}};
-            stage3_real_q <= {width_p{1'b0}};
-            stage0_imag_q <= {width_p{1'b0}};
-            stage1_imag_q <= {width_p{1'b0}};
-            stage2_imag_q <= {width_p{1'b0}};
-            stage3_imag_q <= {width_p{1'b0}};
-            valid_q <= 1'b0;
+            count <= 2'b0;
+            stage0_real <= {width_p{1'b0}};
+            stage1_real <= {width_p{1'b0}};
+            stage2_real <= {width_p{1'b0}};
+            stage3_real <= {width_p{1'b0}};
+            stage0_imag <= {width_p{1'b0}};
+            stage1_imag <= {width_p{1'b0}};
+            stage2_imag <= {width_p{1'b0}};
+            stage3_imag <= {width_p{1'b0}};
+            valid_o <= 1'b0;
         end else begin
-            count_q <= count_d;
-            stage0_real_q <= stage0_real_d;
-            stage1_real_q <= stage1_real_d;
-            stage2_real_q <= stage2_real_d;
-            stage3_real_q <= stage3_real_d;
-            stage0_imag_q <= stage0_imag_d;
-            stage1_imag_q <= stage1_imag_d;
-            stage2_imag_q <= stage2_imag_d;
-            stage3_imag_q <= stage3_imag_d;
-            valid_q <= valid_d;
-        end
-    end
-    
-
-    always_comb begin
-        count_d = count_q;
-        stage0_real_d = stage0_real_q;
-        stage1_real_d = stage1_real_q;
-        stage2_real_d = stage2_real_q;
-        stage3_real_d = stage3_real_q;
-        stage0_imag_d = stage0_imag_q;
-        stage1_imag_d = stage1_imag_q;
-        stage2_imag_d = stage2_imag_q;
-        stage3_imag_d = stage3_imag_q;
-        valid_d = valid_q;
-        
-        if (valid_i && ready_i) begin
-            stage3_real_d = stage2_real_q;
-            stage2_real_d = stage1_real_q;
-            stage1_real_d = stage0_real_q;
-            stage0_real_d = serial_real;
+            if (valid_i && ready_i) begin
+                // Shift pipeline and load new data
+                stage3_real <= stage2_real;
+                stage2_real <= stage1_real;
+                stage1_real <= stage0_real;
+                stage0_real <= serial_real;
+                
+                stage3_imag <= stage2_imag;
+                stage2_imag <= stage1_imag;
+                stage1_imag <= stage0_imag;
+                stage0_imag <= serial_imag;
+                
+                count <= count + 1;
+                
+                // When we've collected 4 samples, assert valid
+                if (count == 2'b11) begin
+                    valid_o <= 1'b1;
+                end
+            end
             
-            stage3_imag_d = stage2_imag_q;
-            stage2_imag_d = stage1_imag_q;
-            stage1_imag_d = stage0_imag_q;
-            stage0_imag_d = serial_imag;
-            
-            count_d = count_q + 1;
-            
-            if (count_q == 2'b11) begin
-                valid_d = 1'b1;
+            // Clear valid when downstream is ready
+            if (valid_o && ready_i) begin
+                valid_o <= 1'b0;
+                count <= 2'b0;
             end
         end
-        
-        if (valid_q && ready_i) begin
-            valid_d = 1'b0;
-            count_d = 2'b0;
-        end
     end
     
-
-    assign buf_real_0 = stage0_real_q;
-    assign buf_real_1 = stage1_real_q;
-    assign buf_real_2 = stage2_real_q;
-    assign buf_real_3 = stage3_real_q;
-    assign buf_imag_0 = stage0_imag_q;
-    assign buf_imag_1 = stage1_imag_q;
-    assign buf_imag_2 = stage2_imag_q;
-    assign buf_imag_3 = stage3_imag_q;
-    assign valid_o = valid_q;
+    //------------------------------------------------------------------------
+    // Output Assignments
+    //------------------------------------------------------------------------
+    always @* begin
+        buf_real_0 = stage0_real;
+        buf_real_1 = stage1_real;
+        buf_real_2 = stage2_real;
+        buf_real_3 = stage3_real;
+        buf_imag_0 = stage0_imag;
+        buf_imag_1 = stage1_imag;
+        buf_imag_2 = stage2_imag;
+        buf_imag_3 = stage3_imag;
+    end
 
 endmodule
 
-module fft
-    #(parameter width_p = 8
-    )
-    (input signed [width_p - 1:0] in_real_0
-    ,input signed [width_p - 1:0] in_real_1
-    ,input signed [width_p - 1:0] in_real_2
-    ,input signed [width_p - 1:0] in_real_3
-    ,input signed [width_p - 1:0] in_img_0
-    ,input signed [width_p - 1:0] in_img_1
-    ,input signed [width_p - 1:0] in_img_2
-    ,input signed [width_p - 1:0] in_img_3
-    ,output signed [width_p -1:0] out_real_0
-    ,output signed [width_p -1:0] out_real_1
-    ,output signed [width_p -1:0] out_real_2
-    ,output signed [width_p -1:0] out_real_3
-    ,output signed [width_p -1:0] out_img_0
-    ,output signed [width_p -1:0] out_img_1
-    ,output signed [width_p -1:0] out_img_2
-    ,output signed [width_p -1:0] out_img_3
-    );
-
-
+//============================================================================
+// FFT Module: 4-point DIF FFT (Combinational)
+//============================================================================
+module fft #(
+    parameter width_p = 8
+) (
+    input  signed [width_p-1:0] in_real_0,
+    input  signed [width_p-1:0] in_real_1,
+    input  signed [width_p-1:0] in_real_2,
+    input  signed [width_p-1:0] in_real_3,
+    input  signed [width_p-1:0] in_img_0,
+    input  signed [width_p-1:0] in_img_1,
+    input  signed [width_p-1:0] in_img_2,
+    input  signed [width_p-1:0] in_img_3,
+    output signed [width_p-1:0] out_real_0,
+    output signed [width_p-1:0] out_real_1,
+    output signed [width_p-1:0] out_real_2,
+    output signed [width_p-1:0] out_real_3,
+    output signed [width_p-1:0] out_img_0,
+    output signed [width_p-1:0] out_img_1,
+    output signed [width_p-1:0] out_img_2,
+    output signed [width_p-1:0] out_img_3
+);
+    // Stage 1 intermediate signals
     wire signed [width_p-1:0] A_r, B_r, C_r, D_r;
     wire signed [width_p-1:0] A_i, B_i, C_i, D_i;
 
+    // Stage 1 computations
     assign A_r = (in_real_0 + in_real_2) >>> 1;
     assign B_r = (in_real_1 + in_real_3) >>> 1;
     assign C_r = (in_real_0 - in_real_2) >>> 1;
@@ -241,7 +250,7 @@ module fft
     assign C_i = (in_img_0 - in_img_2) >>> 1;
     assign D_i = (-(in_real_1 - in_real_3)) >>> 1;
 
-
+    // Stage 2 computations (final output)
     assign out_real_0 = (A_r + B_r) >>> 1;
     assign out_real_1 = (A_r - B_r) >>> 1;
     assign out_real_2 = (C_r + D_r) >>> 1;
@@ -254,7 +263,7 @@ module fft
 endmodule
 
 //============================================================================
-// PISO Module: Parallel In Serial Out (4-stage to serial)
+// PISO Module - Parallel In Serial Out
 //============================================================================
 module piso #(
     parameter width_p = 6
@@ -262,7 +271,7 @@ module piso #(
     input  wire                     clk_i,
     input  wire                     reset_i,
     input  wire                     valid_i,
-    output wire                     ready_o,
+    output reg                      ready_o,
     input  wire [width_p-1:0]       buf_real_0,
     input  wire [width_p-1:0]       buf_real_1,
     input  wire [width_p-1:0]       buf_real_2,
@@ -274,95 +283,80 @@ module piso #(
     output reg  [width_p-1:0]       serial_real,
     output reg  [width_p-1:0]       serial_imag
 );
-  
-    reg [1:0] count_q, count_d;
-    reg [width_p-1:0] buffer_real_q[0:3];
-    reg [width_p-1:0] buffer_imag_q[0:3];
-    reg busy_q, busy_d;
-    reg [width_p-1:0] buffer_real_next[0:3];
-    reg [width_p-1:0] buffer_imag_next[0:3];
+    //------------------------------------------------------------------------
+    // Internal Signals
+    //------------------------------------------------------------------------
+    reg [1:0] count;
+    reg [width_p-1:0] buffer_real[0:3];
+    reg [width_p-1:0] buffer_imag[0:3];
+    reg busy;
     
-
+    //------------------------------------------------------------------------
+    // Sequential Logic
+    //------------------------------------------------------------------------
     always @(posedge clk_i) begin
         integer j;
+        
         if (reset_i) begin
-            count_q <= 2'b0;
-            busy_q <= 1'b0;
+            count <= 2'b0;
+            busy <= 1'b0;
+            ready_o <= 1'b1;
+            serial_real <= {width_p{1'b0}};
+            serial_imag <= {width_p{1'b0}};
             for (j = 0; j < 4; j = j + 1) begin
-                buffer_real_q[j] <= {width_p{1'b0}};
-                buffer_imag_q[j] <= {width_p{1'b0}};
+                buffer_real[j] <= {width_p{1'b0}};
+                buffer_imag[j] <= {width_p{1'b0}};
             end
         end else begin
-            count_q <= count_d;
-            busy_q <= busy_d;
-            for (j = 0; j < 4; j = j + 1) begin
-                buffer_real_q[j] <= buffer_real_next[j];
-                buffer_imag_q[j] <= buffer_imag_next[j];
+            // Default ready flag
+            ready_o <= !busy;
+            
+            if (valid_i && !busy) begin
+                // Load new data
+                buffer_real[0] <= buf_real_0;
+                buffer_real[1] <= buf_real_1;
+                buffer_real[2] <= buf_real_2;
+                buffer_real[3] <= buf_real_3;
+                buffer_imag[0] <= buf_imag_0;
+                buffer_imag[1] <= buf_imag_1;
+                buffer_imag[2] <= buf_imag_2;
+                buffer_imag[3] <= buf_imag_3;
+                busy <= 1'b1;
+                count <= 2'b0;
+                
+                // Output first sample immediately
+                serial_real <= buf_real_0;
+                serial_imag <= buf_imag_0;
+            end else if (busy) begin
+                // Output current sample based on count
+                case (count)
+                    2'b00: begin
+                        serial_real <= buffer_real[0];
+                        serial_imag <= buffer_imag[0];
+                    end
+                    2'b01: begin
+                        serial_real <= buffer_real[1];
+                        serial_imag <= buffer_imag[1];
+                    end
+                    2'b10: begin
+                        serial_real <= buffer_real[2];
+                        serial_imag <= buffer_imag[2];
+                    end
+                    2'b11: begin
+                        serial_real <= buffer_real[3];
+                        serial_imag <= buffer_imag[3];
+                    end
+                endcase
+                
+                // Increment counter
+                count <= count + 1;
+                
+                // After outputting all 4 samples, clear busy
+                if (count == 2'b11) begin
+                    busy <= 1'b0;
+                end
             end
         end
     end
-    
-
-    always_comb begin
-        integer k;
-        
-        count_d = count_q;
-        busy_d = busy_q;
-        for (k = 0; k < 4; k = k + 1) begin
-            buffer_real_next[k] = buffer_real_q[k];
-            buffer_imag_next[k] = buffer_imag_q[k];
-        end
-        
-  
-        serial_real = {width_p{1'b0}};
-        serial_imag = {width_p{1'b0}};
-        
-        if (valid_i && !busy_q) begin
-
-            buffer_real_next[0] = buf_real_0;
-            buffer_real_next[1] = buf_real_1;
-            buffer_real_next[2] = buf_real_2;
-            buffer_real_next[3] = buf_real_3;
-            buffer_imag_next[0] = buf_imag_0;
-            buffer_imag_next[1] = buf_imag_1;
-            buffer_imag_next[2] = buf_imag_2;
-            buffer_imag_next[3] = buf_imag_3;
-            busy_d = 1'b1;
-            count_d = 2'b0;
-            
-
-            serial_real = buf_real_0;
-            serial_imag = buf_imag_0;
-        end else if (busy_q) begin
-            case (count_q)
-                2'b00: begin
-                    serial_real = buffer_real_q[0];
-                    serial_imag = buffer_imag_q[0];
-                end
-                2'b01: begin
-                    serial_real = buffer_real_q[1];
-                    serial_imag = buffer_imag_q[1];
-                end
-                2'b10: begin
-                    serial_real = buffer_real_q[2];
-                    serial_imag = buffer_imag_q[2];
-                end
-                2'b11: begin
-                    serial_real = buffer_real_q[3];
-                    serial_imag = buffer_imag_q[3];
-                end
-            endcase
-            
-  
-            count_d = count_q + 1;
-
-            if (count_q == 2'b11) begin
-                busy_d = 1'b0;
-            end
-        end
-    end
-    
-
-    assign ready_o = !busy_q;
 
 endmodule
