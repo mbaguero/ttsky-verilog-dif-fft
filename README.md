@@ -1,7 +1,7 @@
 ![](../../workflows/gds/badge.svg) ![](../../workflows/docs/badge.svg) ![](../../workflows/test/badge.svg) ![](../../workflows/fpga/badge.svg)
 
 # 4-Point Decimation in Frequecy Fast Fourier Transform Tiny Tapeout
-This project implements a 4-point DIF FFT, with an IO of:
+This project implements a 4-point DIF FFT, with an IO of
 
 Inputs:
 ui_in[5:0] -> 6 bit real sample
